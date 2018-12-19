@@ -3,21 +3,26 @@
 #include <algorithm>
 #include <iostream>
 
-SuffixTree::SuffixTree(std::string str)
-	: nodes{{0,0,0,0,{},0,0}}, lastNotLeaf(0, 0, this)
+SuffixTree::SuffixTree()
+	: nodes{{0,0,0,0,{},0}}, lastNotLeaf(0, 0, this)
 {
-	nodes.reserve(str.size()*2);
-	for (auto c : str)
-		append(c);
-	append('$');
-	calculate();
+
 }
 
 auto SuffixTree::realIndex(Index i)
 	-> Index
 {
 	Index mod = stored.size() + 1;
-	return ((i % mod) + mod) % mod;
+	if (i > mod*10 || i < mod*10)
+		return ((i % mod) + mod) % mod;
+
+	while (i > mod)
+		i -= mod;
+
+	while (i > mod)
+		i += mod;
+
+	return i;
 }
 
 details::SuffixTreeIterator SuffixTree::
@@ -32,7 +37,7 @@ details::SuffixTreeIterator SuffixTree::
 			if (!it.HasTransition(stored[i]))
 				return Iterator();
 			
-			it.Goto(stored[i]);
+			it.MoveBy(stored[i]);
 			i++;
 			continue;
 		}
@@ -48,6 +53,12 @@ details::SuffixTreeIterator SuffixTree::
 	}
 
 	return it;
+}
+
+auto SuffixTree::Size() const
+	-> Length
+{
+	return nodes.size();
 }
 
 auto SuffixTree::splitState(details::SuffixTreeIterator state)
@@ -68,8 +79,7 @@ auto SuffixTree::splitState(details::SuffixTreeIterator state)
 			state.currentPosition,
 			-1,
 			{{stored[state.currentPosition], state.currentNode}},
-			end.parent,
-			0
+			end.parent
 		});
 	end.parent = nodes.size() - 1;
 	start.transitions[stored[end.parentEdgeStart]] = nodes.size() - 1;
@@ -96,14 +106,22 @@ auto SuffixTree::calculateSuffixLink(Index node)
 	return nodes[node].suffixLink;
 }
 
-void SuffixTree::append(char c)
+void SuffixTree::Append(const std::string& string)
+{
+	stored.reserve(string.size());
+	nodes.reserve(string.size()*2);
+	for (auto c : string)
+		Append(c);
+}
+
+void SuffixTree::Append(char c)
 {
 	stored += c;
 	while (true)
 	{
 		if (lastNotLeaf.HasTransition(c))
 		{
-			lastNotLeaf.Goto(c);
+			lastNotLeaf.MoveBy(c);
 			break;
 		}
 
@@ -117,8 +135,7 @@ void SuffixTree::append(char c)
 				-1,
 				-1,
 				{},
-				parent,
-				0
+				parent
 			});
 		nodes[parent].transitions[c] = nodes.size() - 1;
 		lastNotLeaf = Iterator(calculateSuffixLink(parent), this);
@@ -127,40 +144,10 @@ void SuffixTree::append(char c)
 	}
 }
 
-void SuffixTree::calculate()
-{
-	for (Length i = 0; i < nodes.size(); ++i)
-		calculateSuffixLink(i);
-
-	std::vector<Index> indices(nodes.size());
-	for (Length i = 0; i < nodes.size(); ++i)
-	{
-		indices[i] = i;
-		if (nodes[i].occuranceEnd == -1)
-			nodes[i].occurances = 1;
-		else
-			nodes[i].occurances = 0;
-	}
-
-	std::stable_sort(indices.begin(), indices.end(),
-		[this](Index a, Index b)
-		{
-			return
-				realIndex(this->nodes[a].occuranceEnd) - this->nodes[a].occuranceStart
-				>
-				realIndex(this->nodes[b].occuranceEnd) - this->nodes[b].occuranceStart;
-		});
-
-	for (auto i : indices)
-	{
-		nodes[nodes[i].parent].occurances += nodes[i].occurances;
-	}
-}
-
 auto SuffixTree::begin()
 	-> Iterator
 {
-	return Iterator(1, this);
+	return Iterator(0, this);
 }
 
 auto SuffixTree::end()
@@ -207,7 +194,7 @@ details::SuffixTreeIterator::SuffixTreeIterator()
 	
 }
 
-void details::SuffixTreeIterator::Goto(char c)
+void details::SuffixTreeIterator::MoveBy(char c)
 {
 	if (isOnNode())
 	{
@@ -218,7 +205,7 @@ void details::SuffixTreeIterator::Goto(char c)
 			return;
 		}
 
-		GotoSuffix();
+		MoveToSuffixLink();
 		return;
 	}
 
@@ -230,7 +217,7 @@ void details::SuffixTreeIterator::Goto(char c)
 	++currentPosition;
 }
 
-void details::SuffixTreeIterator::GotoSuffix()
+void details::SuffixTreeIterator::MoveToSuffixLink()
 {
 	if (!isOnNode())
 		throw std::runtime_error("Suffix goto only allowed on nodes.");
@@ -251,10 +238,10 @@ bool details::SuffixTreeIterator::HasTransition(char c)
 }
 
 
-auto details::SuffixTreeIterator::GetOccurances() const
-	-> Length
+auto details::SuffixTreeIterator::GetIndex() const
+	-> Index
 {
-	return get().occurances;
+	return currentNode;
 }
 
 auto details::SuffixTreeIterator::GetLength() const

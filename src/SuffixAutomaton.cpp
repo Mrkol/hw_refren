@@ -3,30 +3,33 @@
 
 
 SuffixAutomaton::SuffixAutomaton()
-	: nodes(1, {-1, 0, false, 1, 0, {}}),
+	: nodes(1, {-1, 0, 0, {}}),
 	fullStringNode(0)
 {
 
 }
 
-SuffixAutomaton::SuffixAutomaton(std::string string)
-	: SuffixAutomaton()
+auto SuffixAutomaton::Size()
+	-> Length
+{
+	return nodes.size();
+}
+
+void SuffixAutomaton::Append(const std::string& string)
 {
 	nodes.reserve(2*string.size());
 
 	for (auto c : string)
 	{
-		append(c);
+		Append(c);
 	}
-
-	calculate();
 }
 
-void SuffixAutomaton::append(char newChar)
+void SuffixAutomaton::Append(char newChar)
 {
 	Iterator it(fullStringNode, this);
 	fullStringNode = nodes.size();
-	nodes.push_back({0, it.GetLength() + 1, false, 0, it.GetLength() + 1, {}});
+	nodes.push_back({0, it.GetLength() + 1, it.GetLength() + 1, {}});
 	Node& newNode = nodes.back();
 
 
@@ -34,7 +37,7 @@ void SuffixAutomaton::append(char newChar)
 	while (it && !it.HasTransition(newChar))
 	{
 		it.get().transitions[newChar] = fullStringNode;
-		it.GotoSuffix();
+		it.MoveToSuffixLink();
 	}
 
 	if (!it)
@@ -44,7 +47,7 @@ void SuffixAutomaton::append(char newChar)
 	}
 
 	Iterator next = it;
-	next.Goto(newChar);
+	next.MoveBy(newChar);
 	if (next.GetLength() == it.GetLength() + 1)
 	{
 		newNode.suffixLink = next.currentNode;
@@ -52,7 +55,6 @@ void SuffixAutomaton::append(char newChar)
 	}
 
 	Node clone = next.get();
-	clone.cloned = true;
 	clone.length = it.GetLength() + 1;
 	next.get().suffixLink = nodes.size();
 	newNode.suffixLink = nodes.size();
@@ -61,7 +63,7 @@ void SuffixAutomaton::append(char newChar)
 		&& it.get().transitions[newChar] == next.currentNode)
 	{
 		it.get().transitions[newChar] = nodes.size();
-		it.GotoSuffix();
+		it.MoveToSuffixLink();
 	}
 
 	nodes.push_back(clone);
@@ -73,34 +75,16 @@ auto SuffixAutomaton::begin()
 	return Iterator(0, this);
 }
 
+auto SuffixAutomaton::FullString()
+	-> Iterator
+{
+	return Iterator(fullStringNode, this);
+}
+
 auto SuffixAutomaton::end()
 	-> Iterator
 {
 	return Iterator(nodes.size(), this);
-}
-
-void SuffixAutomaton::calculate()
-{
-	std::vector<Index> indices(nodes.size());
-	for (Length i = 0; i < nodes.size(); ++i)
-	{
-		indices[i] = i;
-		if (nodes[i].cloned)
-			nodes[i].occurances = 0;
-		else
-			nodes[i].occurances = 1;
-	}
-
-	std::stable_sort(indices.begin(), indices.end(),
-		[this](Index a, Index b)
-		{
-			return this->nodes[a].length > this->nodes[b].length;
-		});
-
-	for (auto i : indices)
-	{
-		nodes[nodes[i].suffixLink].occurances += nodes[i].occurances;
-	}
 }
 
 details::SuffixAutomatonIterator::
@@ -121,13 +105,13 @@ auto details::SuffixAutomatonIterator::get() const
 {
 	return owner->nodes[currentNode];
 }
-void details::SuffixAutomatonIterator::Goto(char c)
+void details::SuffixAutomatonIterator::MoveBy(char c)
 {
 	currentNode = HasTransition(c)
 		? get().transitions[c] : get().suffixLink;
 }
 
-void details::SuffixAutomatonIterator::GotoSuffix()
+void details::SuffixAutomatonIterator::MoveToSuffixLink()
 {
 	currentNode = get().suffixLink;
 }
@@ -137,10 +121,10 @@ bool details::SuffixAutomatonIterator::HasTransition(char c)
 	return get().transitions.find(c) != get().transitions.end();
 }
 
-auto details::SuffixAutomatonIterator::GetOccurances() const
-	-> Length
+auto details::SuffixAutomatonIterator::GetIndex() const
+	-> Index
 {
-	return get().occurances;
+	return currentNode;
 }
 
 auto details::SuffixAutomatonIterator::GetLength() const
@@ -202,7 +186,6 @@ std::ostream& operator<<(std::ostream& out,
 		out << "\t" << i << " [label=\"";
 		out << i;
 		out << "," << automaton.nodes[i].length;
-		out << "," << automaton.nodes[i].occurances;
 		out << "\"];" << std::endl;
 
 		for (auto index : node.transitions)

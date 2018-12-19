@@ -21,7 +21,6 @@ namespace details
 		Index suffixLink;
 		std::unordered_map<char, Index> transitions;
 		Index parent;
-		Length occurances;
 	};
 }
 
@@ -49,11 +48,11 @@ private:
 public:
 	SuffixTreeIterator();
 
-	void Goto(char c);
-	void GotoSuffix();
+	void MoveBy(char c);
+	void MoveToSuffixLink();
 	bool HasTransition(char c);
 
-	Length GetOccurances() const;
+	Index GetIndex() const;
 	Length GetLength() const;
 	std::tuple<Index, Index> GetSlice();
 
@@ -83,13 +82,9 @@ private:
 
 	Index splitState(details::SuffixTreeIterator state);
 
-	void append(char c);
-
 	Index calculateSuffixLink(Index node);
 
 	Index realIndex(Index i);
-
-	void calculate();
 
 	friend class details::SuffixTreeIterator;
 
@@ -99,7 +94,12 @@ private:
 public:
 	using Iterator = details::SuffixTreeIterator;
 
-	SuffixTree(std::string str);
+	SuffixTree();
+
+	void Append(char c);
+	void Append(const std::string& str);
+
+	Length Size() const;
 
 	Iterator begin();
 	Iterator end();

@@ -26,8 +26,6 @@ private:
 	{
 		Index suffixLink;
 		Length length;
-		bool cloned;
-		Length occurances;
 		Length firstOccuranceEnd;
 		std::unordered_map<char, Index> transitions;
 	};
@@ -35,10 +33,6 @@ private:
 	std::vector<Node> nodes;
 
 	Index fullStringNode;
-
-	void append(char newChar);
-
-	void calculate();
 
 	friend class details::SuffixAutomatonIterator;
 
@@ -50,10 +44,16 @@ public:
 	using Iterator = details::SuffixAutomatonIterator;
 
 	SuffixAutomaton();
-	SuffixAutomaton(std::string str);
+
+	void Append(char newChar);
+	void Append(const std::string& string);
+
+	Length Size();
 
 	Iterator begin();
 	Iterator end();
+
+	Iterator FullString();
 };
 
 class details::SuffixAutomatonIterator
@@ -71,11 +71,11 @@ private:
 public:
 	SuffixAutomatonIterator();
 
-	void Goto(char c);
-	void GotoSuffix();
+	void MoveBy(char c);
+	void MoveToSuffixLink();
 	bool HasTransition(char c);
 
-	Length GetOccurances() const;
+	Index GetIndex() const;
 	Length GetLength() const;
 	std::tuple<Index, Index> GetSlice();
 

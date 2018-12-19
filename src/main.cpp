@@ -21,30 +21,26 @@ std::string ReadData(std::istream& in)
 	return str;
 }
 
-std::pair<std::string, size_t> Refrain(std::string str)
+void WriteData(const Refrain& data, std::ostream& out)
 {
-	RefrainCalculator<SuffixAutomaton> calculator(str);
+	out << data.RefrainValue << std::endl;
+	out << data.Substring.size() << std::endl;
 
-	auto[l, r, occ] = calculator.Calculate();
-
-	return {str.substr(l, r - l), occ*(r-l)};
-}
-
-void WriteData(std::pair<std::string, size_t> data, std::ostream& out)
-{
-	out << data.second << std::endl;
-	out << data.first.size() << std::endl;
-
-	for (auto c : data.first)
+	for (auto c : data.Substring)
 	{
 		out << size_t(c - 'a') << " ";
 	}
 	std::cout << std::endl;
 }
 
+void SolveTask()
+{
+	WriteData(RefrainCalculator<SuffixAutomaton>(ReadData(std::cin)).Result(), std::cout);
+}
+
 int main()
 {
-	WriteData(Refrain(ReadData(std::cin)), std::cout);
-	
+	SolveTask();
+
 	return 0;
 }
