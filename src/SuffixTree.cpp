@@ -13,13 +13,13 @@ auto SuffixTree::realIndex(Index i)
 	-> Index
 {
 	Index mod = stored.size() + 1;
-	if (i > mod*10 || i < mod*10)
-		return ((i % mod) + mod) % mod;
+	if (i > mod*10 || i < -mod*10)
+		i %= mod;
 
-	while (i > mod)
+	while (i >= mod)
 		i -= mod;
 
-	while (i > mod)
+	while (i < 0)
 		i += mod;
 
 	return i;
@@ -217,6 +217,17 @@ void details::SuffixTreeIterator::MoveBy(char c)
 	++currentPosition;
 }
 
+std::vector<char> details::SuffixTreeIterator::GetTransitions()
+{
+	std::vector<char> result;
+	for (auto it = get().transitions.begin();
+		it != get().transitions.end(); ++it)
+	{
+		result.push_back(it->first);
+	}
+	return result;
+}
+
 void details::SuffixTreeIterator::MoveToSuffixLink()
 {
 	if (!isOnNode())
@@ -247,13 +258,13 @@ auto details::SuffixTreeIterator::GetIndex() const
 auto details::SuffixTreeIterator::GetLength() const
 	-> Length
 {
-	return currentPosition - get().occuranceStart - get().transitions.empty();
+	return currentPosition - get().occuranceStart;
 }
 
 auto details::SuffixTreeIterator::GetSlice()
 	-> std::tuple<Index, Index>
 {
-	return {get().occuranceStart, get().occuranceStart + GetLength()};
+	return {get().occuranceStart, currentPosition};
 }
 
 auto details::SuffixTreeIterator::operator++()
@@ -323,8 +334,8 @@ std::ostream& operator<<(std::ostream& out,
 			out <<  "\"];" << std::endl;
 		}
 
-		// out << "\t" << i << " -> " << tree.nodes[i].suffixLink;
-		// out << " [style=dotted, color=grey];" << std::endl;
+		out << "\t" << i << " -> " << tree.nodes[i].suffixLink;
+		out << " [style=dotted, color=grey];" << std::endl;
 	}
 
 	out << "}" << std::endl;

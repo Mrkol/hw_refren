@@ -52,6 +52,8 @@ public:
 	void MoveToSuffixLink();
 	bool HasTransition(char c);
 
+	std::vector<char> GetTransitions();
+
 	Index GetIndex() const;
 	Length GetLength() const;
 	std::tuple<Index, Index> GetSlice();

@@ -32,13 +32,8 @@ void SuffixAutomaton::Append(char newChar)
 	nodes.push_back({0, it.GetLength() + 1, it.GetLength() + 1, {}});
 	Node& newNode = nodes.back();
 
-
-
-	while (it && !it.HasTransition(newChar))
-	{
+	for (;it && !it.HasTransition(newChar); it.MoveToSuffixLink())
 		it.get().transitions[newChar] = fullStringNode;
-		it.MoveToSuffixLink();
-	}
 
 	if (!it)
 	{
@@ -48,25 +43,30 @@ void SuffixAutomaton::Append(char newChar)
 
 	Iterator next = it;
 	next.MoveBy(newChar);
-	if (next.GetLength() == it.GetLength() + 1)
+
+	if (next.GetLength() != it.GetLength() + 1)
 	{
-		newNode.suffixLink = next.currentNode;
+		newNode.suffixLink = cloneAndUpdate(next, it, newChar);
 		return;
 	}
 
-	Node clone = next.get();
-	clone.length = it.GetLength() + 1;
-	next.get().suffixLink = nodes.size();
-	newNode.suffixLink = nodes.size();
+	newNode.suffixLink = next.currentNode;
+}
 
-	while (it && it.HasTransition(newChar)
-		&& it.get().transitions[newChar] == next.currentNode)
-	{
-		it.get().transitions[newChar] = nodes.size();
-		it.MoveToSuffixLink();
-	}
+auto SuffixAutomaton::cloneAndUpdate(Iterator which, Iterator prev, char newChar)
+	-> Index
+{
+	Node clone = which.get();
+	clone.length = prev.GetLength() + 1;
+	which.get().suffixLink = nodes.size();
+
+	for (; prev && prev.HasTransition(newChar)
+		&& prev.get().transitions[newChar] == which.currentNode;
+			prev.MoveToSuffixLink())
+		prev.get().transitions[newChar] = nodes.size();
 
 	nodes.push_back(clone);
+	return nodes.size() - 1;
 }
 
 auto SuffixAutomaton::begin()
@@ -133,10 +133,21 @@ auto details::SuffixAutomatonIterator::GetLength() const
 	return get().length;
 }
 
+std::vector<char> details::SuffixAutomatonIterator::GetTransitions()
+{
+	std::vector<char> result;
+	for (auto it = get().transitions.begin();
+		it != get().transitions.end(); ++it)
+	{
+		result.push_back(it->first);
+	}
+	return result;
+}
+
 auto details::SuffixAutomatonIterator::GetSlice()
 	-> std::tuple<Index, Index>
 {
-	return {get().firstOccuranceEnd - get().length, get().firstOccuranceEnd};
+	return {get().firstOccurenceEnd - get().length, get().firstOccurenceEnd};
 }
 
 auto details::SuffixAutomatonIterator::operator++()
@@ -203,3 +214,4 @@ std::ostream& operator<<(std::ostream& out,
 	out << "}" << std::endl;
 	return out;
 }
+

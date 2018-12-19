@@ -26,13 +26,16 @@ private:
 	{
 		Index suffixLink;
 		Length length;
-		Length firstOccuranceEnd;
+		Length firstOccurenceEnd;
 		std::unordered_map<char, Index> transitions;
 	};
 
 	std::vector<Node> nodes;
 
 	Index fullStringNode;
+
+	Index cloneAndUpdate(details::SuffixAutomatonIterator which,
+		details::SuffixAutomatonIterator prev, char newChar);
 
 	friend class details::SuffixAutomatonIterator;
 
@@ -79,6 +82,8 @@ public:
 	Length GetLength() const;
 	std::tuple<Index, Index> GetSlice();
 
+	std::vector<char> GetTransitions();
+
 	SuffixAutomatonIterator& operator++();
 	SuffixAutomatonIterator operator++(int);
 
@@ -92,3 +97,4 @@ std::ostream& operator<<(std::ostream& out,
 	const SuffixAutomaton& automaton);
 
 #endif // SUFFIX_AUTOMATON_HPP
+

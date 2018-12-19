@@ -31,29 +31,43 @@ protected:
 	std::vector<Length> nodeOccurences;
 
 	virtual void calculateBase() = 0;
+	virtual Index length(Iterator j) = 0;
+
+	void sortIterators(std::vector<Iterator>& vector, Length max)
+	{
+		std::vector<std::vector<Iterator>> buckets(max);
+		for (auto it : vector)
+			buckets[it.GetLength()].push_back(it);
+
+		vector.clear();
+
+		for (auto& vec : buckets)
+			for (auto& el : vec)
+				vector.push_back(el);
+	}
 
 	void precalculate()
 	{
-		sortedNodes.resize(structure.Size());
-		for (auto it = structure.begin(); it != structure.end(); ++it)
-			sortedNodes[it.GetIndex()] = it;
-		
 		nodeOccurences.assign(structure.Size(), 0);
 		calculateBase();
 
-		std::stable_sort(sortedNodes.begin(), sortedNodes.end(),
-			[](Iterator a, Iterator b)
-			{
-				return a.GetLength() > b.GetLength();
-			});
+		sortedNodes.resize(structure.Size());
+		for (auto it = structure.begin(); it != structure.end(); ++it)
+			sortedNodes[it.GetIndex()] = it;
+
+		sortIterators(sortedNodes, stored.size() + 2);
+		std::reverse(sortedNodes.begin(), sortedNodes.end());
 
 		for (auto i : sortedNodes)
 		{
-			if (i == structure.begin())
-				continue;
-			auto j = i;
-			j.MoveToSuffixLink();
-			nodeOccurences[j.GetIndex()] += nodeOccurences[i.GetIndex()];
+			auto transitions = i.GetTransitions();
+			for (auto c : transitions)
+			{
+				auto j = i;
+				j.MoveBy(c);
+
+				nodeOccurences[i.GetIndex()] += nodeOccurences[j.GetIndex()];
+			}
 		}
 	}
 
@@ -70,18 +84,18 @@ public:
 		precalculate();
 		Iterator best;
 
-		for (auto& i : sortedNodes)
+		for (auto i = structure.begin(); i != structure.end(); ++i)
 		{
 			if (!best ||
-				i.GetLength() * nodeOccurences[i.GetIndex()] > 
-				best.GetLength() * nodeOccurences[best.GetIndex()])
+				length(i) * nodeOccurences[i.GetIndex()] > 
+				length(best) * nodeOccurences[best.GetIndex()])
 			{
 				best = i;
 			}
 		}
 
-		auto[l, r] = best.GetSlice();
-		return {stored.substr(l, r - l), (r - l)*nodeOccurences[best.GetIndex()]};
+		return {stored.substr(std::get<0>(best.GetSlice()), length(best)),
+			length(best)*nodeOccurences[best.GetIndex()]};
 	}
 };
 
@@ -104,11 +118,16 @@ private:
 		}
 	}
 
+	Index length(Iterator i) override
+	{
+		return i.GetLength();
+	}
+
 public:
 	explicit RefrainCalculator(const std::string& string)
 		: BasicRefrainCalculator(string)
 	{
-
+		// std::cout << structure;
 	}
 };
 
@@ -121,8 +140,14 @@ private:
 		for (auto it = structure.begin(); it != structure.end(); ++it)
 		{
 			auto r = std::get<1>(it.GetSlice());
-			nodeOccurences[it.GetIndex()] = (r >= 0 && Length(r) == stored.size());	
+			nodeOccurences[it.GetIndex()] = (r >= 0 && Length(r) == stored.size() + 1);	
 		}
+	}
+
+	Index length(Iterator i) override
+	{
+		Index r = std::get<1>(i.GetSlice());
+		return i.GetLength() - (r >= 0 && Length(r) == stored.size() + 1);
 	}
 
 public:

@@ -15,7 +15,7 @@ std::string ReadData(std::istream& in)
 	{
 		size_t current = 0;
 		in >> current;
-		str.push_back('a' + current);
+		str.push_back('a' + current - 1);
 	}
 
 	return str;
@@ -28,14 +28,14 @@ void WriteData(const Refrain& data, std::ostream& out)
 
 	for (auto c : data.Substring)
 	{
-		out << size_t(c - 'a') << " ";
+		out << size_t(c - 'a' + 1) << " ";
 	}
-	std::cout << std::endl;
+	out << std::endl;
 }
 
 void SolveTask()
 {
-	WriteData(RefrainCalculator<SuffixAutomaton>(ReadData(std::cin)).Result(), std::cout);
+	WriteData(RefrainCalculator<SuffixTree>(ReadData(std::cin)).Result(), std::cout);
 }
 
 int main()
